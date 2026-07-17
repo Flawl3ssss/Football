@@ -12,6 +12,21 @@ import {
 import type { Engine } from '@babylonjs/core/Engines/engine';
 import { createPrototypeFootballers, type Footballer } from '../gameplay/episode';
 
+const GAMEPLAY_CAMERA_ALPHA = Math.PI / 2;
+const GAMEPLAY_CAMERA_BETA = Math.PI / 3.3;
+const GAMEPLAY_CAMERA_RADIUS = 8.2;
+const GAMEPLAY_CAMERA_ALPHA_RANGE = 0.3;
+
+export function configureGameplayCamera(camera: ArcRotateCamera): void {
+  camera.fov = 0.72;
+  camera.lowerBetaLimit = GAMEPLAY_CAMERA_BETA;
+  camera.upperBetaLimit = GAMEPLAY_CAMERA_BETA;
+  camera.lowerAlphaLimit = GAMEPLAY_CAMERA_ALPHA - GAMEPLAY_CAMERA_ALPHA_RANGE;
+  camera.upperAlphaLimit = GAMEPLAY_CAMERA_ALPHA + GAMEPLAY_CAMERA_ALPHA_RANGE;
+  camera.lowerRadiusLimit = GAMEPLAY_CAMERA_RADIUS;
+  camera.upperRadiusLimit = GAMEPLAY_CAMERA_RADIUS;
+}
+
 export interface PrototypeScene extends Scene {
   ball: Mesh;
   trajectoryRoot: TransformNode;
@@ -32,16 +47,13 @@ export function createGameScene(engine: Engine): PrototypeScene {
 
   const camera = new ArcRotateCamera(
     'portrait-camera',
-    Math.PI / 2,
-    Math.PI / 3.3,
-    8.2,
+    GAMEPLAY_CAMERA_ALPHA,
+    GAMEPLAY_CAMERA_BETA,
+    GAMEPLAY_CAMERA_RADIUS,
     new Vector3(0, 0.35, 0.35),
     scene,
   );
-  camera.attachControl(false);
-  camera.fov = 0.72;
-  camera.lowerRadiusLimit = 6;
-  camera.upperRadiusLimit = 9;
+  configureGameplayCamera(camera);
 
   const light = new HemisphericLight('soft-mobile-light', new Vector3(0, 1, -0.4), scene);
   light.intensity = 0.92;
