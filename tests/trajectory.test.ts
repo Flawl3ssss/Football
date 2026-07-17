@@ -61,12 +61,7 @@ describe('ball trajectory prototype', () => {
       createTrajectoryPlan(firstDecisionGesture({ x: 195, y: 610 }, { x: 105, y: 700 })).reason,
     ).toBe('Проведи пас в сторону партнёра'));
   it('does not apply the partner pass sector to second decision shot trajectories', () =>
-    expect(
-      createTrajectoryPlan({
-        ...gesture({ x: 195, y: 610 }, { x: 250, y: 300 }),
-        decisionTrajectory: { ...DEFAULT_FIRST_DECISION_PASS_SECTOR, decision: 'shot' },
-      }).valid,
-    ).toBe(true));
+    expect(createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 250, y: 300 })).valid).toBe(true));
   it('rejects short gestures', () =>
     expect(createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 195, y: 600 })).valid).toBe(
       false,

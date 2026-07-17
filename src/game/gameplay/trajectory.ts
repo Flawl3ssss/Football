@@ -19,8 +19,6 @@ export interface DecisionTrajectoryConstraints {
   allowedDistance: number;
   /** Partner zone center and optional visual radius, in screen pixels. */
   targetZone: Point2D & { radius?: number };
-  /** Restrict only pass decisions; later shooting decisions can opt out with `shot`. */
-  decision: 'pass' | 'shot';
 }
 export type ShotKind = 'pass' | 'power' | 'lob' | 'curve';
 export type ShotOutcome = 'goal' | 'miss' | 'post' | 'crossbar' | 'out';
@@ -56,7 +54,6 @@ export const DEFAULT_FIRST_DECISION_PASS_SECTOR: DecisionTrajectoryConstraints =
   maxAngle: 28,
   allowedDistance: 125,
   targetZone: { x: 105, y: 430, radius: 70 },
-  decision: 'pass',
 };
 
 export function distance(a: Point2D, b: Point2D): number {
@@ -133,7 +130,7 @@ export function validateDecisionTrajectory(
   gesture: TrajectoryGesture,
   constraints = gesture.decisionTrajectory,
 ): string | undefined {
-  if (!constraints || constraints.decision === 'shot') return undefined;
+  if (!constraints) return undefined;
   if (gesture.points.length < 2) return 'Жест слишком короткий';
   const ballScreen = { x: gesture.viewport.width / 2, y: gesture.viewport.height * 0.72 };
   const start = gesture.points[0]!;
