@@ -9,7 +9,11 @@ import { watchViewport } from '../../services/viewportService';
 import { createGameScene, type PrototypeScene } from './createScene';
 import { GameState } from './gameState';
 import { createPointerInput } from '../gameplay/pointerInput';
-import { createTrajectoryPlan, simulateTrajectory } from '../gameplay/trajectory';
+import {
+  DEFAULT_FIRST_DECISION_PASS_SECTOR,
+  createTrajectoryPlan,
+  simulateTrajectory,
+} from '../gameplay/trajectory';
 import { EpisodeStateMachine, resolveEpisode } from '../gameplay/episode';
 
 export interface GameApp {
@@ -45,7 +49,7 @@ export async function startGameApp(
       episode.reset();
       episode.transition('AwaitInput');
       scene.resetPrototype();
-      shell.setStatus('Нарисуйте траекторию от мяча к воротам.');
+      shell.setStatus('Проведите пас от мяча в сторону партнёра.');
       shell.setDebug('state=AwaitInput');
     };
     shell.resetButton.addEventListener('click', resetPrototype);
@@ -58,6 +62,7 @@ export async function startGameApp(
         if (simulating || episode.getState() !== 'AwaitInput') return;
         const plan = createTrajectoryPlan({
           points,
+          decisionTrajectory: DEFAULT_FIRST_DECISION_PASS_SECTOR,
           viewport: {
             width: shell.canvas.clientWidth || window.innerWidth,
             height: shell.canvas.clientHeight || window.innerHeight,
@@ -72,6 +77,7 @@ export async function startGameApp(
         if (simulating || episode.getState() !== 'AwaitInput') return;
         const plan = createTrajectoryPlan({
           points: gesture.points,
+          decisionTrajectory: DEFAULT_FIRST_DECISION_PASS_SECTOR,
           viewport: {
             width: shell.canvas.clientWidth || window.innerWidth,
             height: shell.canvas.clientHeight || window.innerHeight,
@@ -129,7 +135,7 @@ export async function startGameApp(
     state.start();
     platform.gameplayStart();
     episode.transition('AwaitInput');
-    shell.setStatus('Нарисуйте траекторию от мяча к воротам.');
+    shell.setStatus('Проведите пас от мяча в сторону партнёра.');
     engine.runRenderLoop(() => {
       if (state.getPhase() === 'playing') scene.render();
     });
