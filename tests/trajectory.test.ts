@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createTrajectoryPlan,
+  getGestureStartRadius,
   hasSelfIntersection,
   pathLength,
   screenToField,
@@ -10,7 +11,13 @@ import {
   clampPathLength,
 } from '../src/game/gameplay';
 const viewport = { width: 390, height: 844 };
-const gesture = (...points: { x: number; y: number }[]) => ({ points, viewport });
+const ballScreenPosition = { x: 140, y: 620 };
+const gesture = (...points: { x: number; y: number }[]) => ({
+  points,
+  viewport,
+  ballScreenPosition,
+  startRadius: getGestureStartRadius(viewport),
+});
 
 describe('ball trajectory prototype', () => {
   it('converts 2D gesture points into 3D field space', () =>
@@ -36,11 +43,23 @@ describe('ball trajectory prototype', () => {
       ),
     ).toBeCloseTo(100));
   it('rejects short gestures', () =>
-    expect(createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 195, y: 600 })).valid).toBe(
+    expect(createTrajectoryPlan(gesture({ x: 140, y: 620 }, { x: 140, y: 610 })).valid).toBe(
+      false,
+    ));
+  it('accepts gestures that start directly on the projected ball', () =>
+    expect(createTrajectoryPlan(gesture({ x: 140, y: 620 }, { x: 195, y: 300 })).valid).toBe(
+      true,
+    ));
+  it('accepts gestures that start near the projected ball', () =>
+    expect(createTrajectoryPlan(gesture({ x: 200, y: 640 }, { x: 195, y: 300 })).valid).toBe(
+      true,
+    ));
+  it('rejects gestures that start far from the projected ball', () =>
+    expect(createTrajectoryPlan(gesture({ x: 280, y: 700 }, { x: 195, y: 300 })).valid).toBe(
       false,
     ));
   it('accepts long gestures after clamping', () =>
-    expect(createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 195, y: 10 })).valid).toBe(true));
+    expect(createTrajectoryPlan(gesture({ x: 140, y: 620 }, { x: 195, y: 10 })).valid).toBe(true));
   it('detects curved trajectories', () =>
     expect(
       createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 340, y: 470 }, { x: 250, y: 220 }))

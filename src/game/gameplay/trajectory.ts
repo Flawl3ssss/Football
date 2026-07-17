@@ -8,6 +8,8 @@ export interface Point2D {
 export interface TrajectoryGesture {
   points: Point2D[];
   viewport: { width: number; height: number };
+  ballScreenPosition?: Point2D;
+  startRadius?: number;
 }
 export type ShotKind = 'pass' | 'power' | 'lob' | 'curve';
 export type ShotOutcome = 'goal' | 'miss' | 'post' | 'crossbar' | 'out';
@@ -36,6 +38,9 @@ const CROSSBAR_Y = 1.25;
 const POST_RADIUS = 0.14;
 const MIN_LENGTH = 28;
 const MAX_LENGTH = 520;
+const DEFAULT_BALL_SCREEN_Y = 0.72;
+const MIN_START_RADIUS = 70;
+const MAX_START_RADIUS = 110;
 
 export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -101,11 +106,21 @@ export function screenToField(
   const nz = (0.78 - point.y / viewport.height) * 7.2;
   return new Vector3(nx, 0.18, nz);
 }
+export function getGestureStartRadius(viewport: { width: number; height: number }): number {
+  return Math.max(
+    MIN_START_RADIUS,
+    Math.min(MAX_START_RADIUS, Math.min(viewport.width, viewport.height) * 0.18),
+  );
+}
 export function createTrajectoryPlan(gesture: TrajectoryGesture): TrajectoryPlan {
   if (gesture.points.length < 2) return invalid('Жест слишком короткий', gesture.points);
   const start = gesture.points[0]!;
-  const ballScreen = { x: gesture.viewport.width / 2, y: gesture.viewport.height * 0.72 };
-  if (distance(start, ballScreen) > 150)
+  const ballScreen = gesture.ballScreenPosition ?? {
+    x: gesture.viewport.width / 2,
+    y: gesture.viewport.height * DEFAULT_BALL_SCREEN_Y,
+  };
+  const startRadius = gesture.startRadius ?? getGestureStartRadius(gesture.viewport);
+  if (distance(start, ballScreen) > startRadius)
     return invalid('Начните жест рядом с мячом', gesture.points);
   let points = simplifyPath(smoothPath(clampPathLength(gesture.points)));
   const length = pathLength(points);

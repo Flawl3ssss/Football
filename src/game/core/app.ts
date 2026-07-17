@@ -6,10 +6,14 @@ import { MockPlatformAdapter } from '../../platform/mock/mockPlatformAdapter';
 import { applyMobileGuards, type Disposable } from '../../services/mobileGuards';
 import { watchLifecycle } from '../../services/lifecycleService';
 import { watchViewport } from '../../services/viewportService';
-import { createGameScene, type PrototypeScene } from './createScene';
+import { createGameScene, getBallScreenPosition, type PrototypeScene } from './createScene';
 import { GameState } from './gameState';
 import { createPointerInput } from '../gameplay/pointerInput';
-import { createTrajectoryPlan, simulateTrajectory } from '../gameplay/trajectory';
+import {
+  createTrajectoryPlan,
+  getGestureStartRadius,
+  simulateTrajectory,
+} from '../gameplay/trajectory';
 import { EpisodeStateMachine, resolveEpisode } from '../gameplay/episode';
 
 export interface GameApp {
@@ -40,6 +44,18 @@ export async function startGameApp(
       adaptToDeviceRatio: true,
     });
     const scene = createGameScene(engine) as PrototypeScene;
+    const trajectoryGestureContext = () => {
+      const bounds = shell.canvas.getBoundingClientRect();
+      const viewport = {
+        width: bounds.width || shell.canvas.clientWidth || window.innerWidth,
+        height: bounds.height || shell.canvas.clientHeight || window.innerHeight,
+      };
+      return {
+        viewport,
+        ballScreenPosition: getBallScreenPosition(scene, viewport),
+        startRadius: getGestureStartRadius(viewport),
+      };
+    };
     const resetPrototype = (): void => {
       simulating = false;
       episode.reset();
@@ -58,10 +74,7 @@ export async function startGameApp(
         if (simulating || episode.getState() !== 'AwaitInput') return;
         const plan = createTrajectoryPlan({
           points,
-          viewport: {
-            width: shell.canvas.clientWidth || window.innerWidth,
-            height: shell.canvas.clientHeight || window.innerHeight,
-          },
+          ...trajectoryGestureContext(),
         });
         if (plan.valid) {
           scene.setBallPath(plan.points3D);
@@ -77,10 +90,7 @@ export async function startGameApp(
         if (simulating || episode.getState() !== 'AwaitInput') return;
         const plan = createTrajectoryPlan({
           points: gesture.points,
-          viewport: {
-            width: shell.canvas.clientWidth || window.innerWidth,
-            height: shell.canvas.clientHeight || window.innerHeight,
-          },
+          ...trajectoryGestureContext(),
         });
         if (!plan.valid) {
           shell.setStatus(plan.reason ?? 'Недопустимый жест');
