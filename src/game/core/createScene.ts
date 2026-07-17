@@ -2,6 +2,7 @@ import {
   ArcRotateCamera,
   Color3,
   HemisphericLight,
+  Matrix,
   Mesh,
   MeshBuilder,
   Scene,
@@ -14,10 +15,38 @@ import { createPrototypeFootballers, type Footballer } from '../gameplay/episode
 
 export interface PrototypeScene extends Scene {
   ball: Mesh;
+  startZoneHint: Mesh;
   trajectoryRoot: TransformNode;
   footballers: Footballer[];
   resetPrototype(): void;
   setBallPath(points: Vector3[]): void;
+}
+
+export interface ScreenViewport {
+  width: number;
+  height: number;
+}
+
+export function getBallScreenPosition(scene: PrototypeScene, viewport: ScreenViewport): {
+  x: number;
+  y: number;
+} {
+  const camera = scene.activeCamera;
+  if (!camera) return { x: viewport.width / 2, y: viewport.height * 0.72 };
+
+  const engine = scene.getEngine();
+  const renderWidth = engine.getRenderWidth(true);
+  const renderHeight = engine.getRenderHeight(true);
+  const globalViewport = camera.viewport.toGlobal(renderWidth, renderHeight);
+  const projected = Vector3.Project(
+    scene.ball.getAbsolutePosition(),
+    Matrix.IdentityReadOnly,
+    scene.getTransformMatrix(),
+    globalViewport,
+  );
+  const scaleX = viewport.width / Math.max(renderWidth, 1);
+  const scaleY = viewport.height / Math.max(renderHeight, 1);
+  return { x: projected.x * scaleX, y: projected.y * scaleY };
 }
 
 function material(scene: Scene, name: string, color: Color3): StandardMaterial {
@@ -112,6 +141,17 @@ export function createGameScene(engine: Engine): PrototypeScene {
   ball.position.set(0, 0.18, -3.2);
   ball.material = ballMat;
   scene.ball = ball;
+  const hintMat = material(scene, 'ball-start-zone-hint-material', new Color3(0.25, 0.9, 1));
+  hintMat.alpha = 0.45;
+  const startZoneHint = MeshBuilder.CreateTorus(
+    'ball-start-zone-hint',
+    { diameter: 0.88, thickness: 0.035, tessellation: 48 },
+    scene,
+  );
+  startZoneHint.position.set(ball.position.x, 0.035, ball.position.z);
+  startZoneHint.rotation.x = Math.PI / 2;
+  startZoneHint.material = hintMat;
+  scene.startZoneHint = startZoneHint;
   scene.trajectoryRoot = new TransformNode('trajectory-preview-root', scene);
   scene.footballers = createPrototypeFootballers();
   const homeMat = material(scene, 'home-team-temp-kit', new Color3(0.1, 0.35, 1));
@@ -150,6 +190,7 @@ export function createGameScene(engine: Engine): PrototypeScene {
   };
   scene.resetPrototype = (): void => {
     ball.position.set(0, 0.18, -3.2);
+    startZoneHint.position.set(ball.position.x, 0.035, ball.position.z);
     scene.setBallPath([]);
     camera.setTarget(new Vector3(0, 0.35, 0.35));
   };
