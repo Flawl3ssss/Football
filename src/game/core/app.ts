@@ -63,7 +63,12 @@ export async function startGameApp(
             height: shell.canvas.clientHeight || window.innerHeight,
           },
         });
-        if (plan.valid) scene.setBallPath(plan.points3D);
+        if (plan.valid) {
+          scene.setBallPath(plan.points3D);
+          shell.clearGestureError();
+        } else {
+          shell.showGestureError(plan.reason);
+        }
         shell.setStatus(
           plan.valid ? `Предпросмотр: ${plan.kind}` : (plan.reason ?? 'Недопустимый жест'),
         );
@@ -79,8 +84,10 @@ export async function startGameApp(
         });
         if (!plan.valid) {
           shell.setStatus(plan.reason ?? 'Недопустимый жест');
+          shell.showGestureError(plan.reason);
           return;
         }
+        shell.clearGestureError();
         episode.transition('Simulating');
         simulating = true;
         const result = simulateTrajectory(plan, 60);
