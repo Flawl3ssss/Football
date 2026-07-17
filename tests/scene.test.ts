@@ -11,6 +11,14 @@ describe('createGameScene', () => {
     expect(scene.getLightByName('soft-mobile-light')).toBeTruthy();
     expect(scene.getMeshByName('stage-1-test-object')).toBeTruthy();
 
+    expect(scene.getMeshByName('prototype-football-field')).toBeTruthy();
+    expect(scene.getMeshByName('left-goal-post')).toBeTruthy();
+    expect(scene.getMeshByName('right-goal-post')).toBeTruthy();
+    expect(scene.getMeshByName('goal-crossbar')).toBeTruthy();
+    expect(scene.getMeshByName('background-stands-back-row')).toBeTruthy();
+    expect(scene.getMeshByName('left-fictional-ad-board-0')).toBeTruthy();
+    expect(scene.getMeshByName('right-fictional-ad-board-0')).toBeTruthy();
+
     scene.dispose();
     engine.dispose();
   });
