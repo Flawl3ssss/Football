@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_FIRST_DECISION_PASS_SECTOR,
   createTrajectoryPlan,
   hasSelfIntersection,
   pathLength,
@@ -11,6 +12,11 @@ import {
 } from '../src/game/gameplay';
 const viewport = { width: 390, height: 844 };
 const gesture = (...points: { x: number; y: number }[]) => ({ points, viewport });
+const firstDecisionGesture = (...points: { x: number; y: number }[]) => ({
+  points,
+  viewport,
+  decisionTrajectory: DEFAULT_FIRST_DECISION_PASS_SECTOR,
+});
 
 describe('ball trajectory prototype', () => {
   it('converts 2D gesture points into 3D field space', () =>
@@ -35,6 +41,32 @@ describe('ball trajectory prototype', () => {
         ),
       ),
     ).toBeCloseTo(100));
+
+  it('accepts first decision pass inside the partner sector', () =>
+    expect(
+      createTrajectoryPlan(
+        firstDecisionGesture({ x: 195, y: 610 }, DEFAULT_FIRST_DECISION_PASS_SECTOR.targetZone),
+      ).valid,
+    ).toBe(true));
+  it('rejects first decision pass too far to the left of the partner sector', () =>
+    expect(
+      createTrajectoryPlan(firstDecisionGesture({ x: 195, y: 610 }, { x: -80, y: 430 })).reason,
+    ).toBe('Слишком влево'));
+  it('rejects first decision pass too far to the right of the partner sector', () =>
+    expect(
+      createTrajectoryPlan(firstDecisionGesture({ x: 195, y: 610 }, { x: 250, y: 430 })).reason,
+    ).toBe('Слишком вправо'));
+  it('rejects first decision backward pass gestures', () =>
+    expect(
+      createTrajectoryPlan(firstDecisionGesture({ x: 195, y: 610 }, { x: 105, y: 700 })).reason,
+    ).toBe('Проведи пас в сторону партнёра'));
+  it('does not apply the partner pass sector to second decision shot trajectories', () =>
+    expect(
+      createTrajectoryPlan({
+        ...gesture({ x: 195, y: 610 }, { x: 250, y: 300 }),
+        decisionTrajectory: { ...DEFAULT_FIRST_DECISION_PASS_SECTOR, decision: 'shot' },
+      }).valid,
+    ).toBe(true));
   it('rejects short gestures', () =>
     expect(createTrajectoryPlan(gesture({ x: 195, y: 610 }, { x: 195, y: 600 })).valid).toBe(
       false,

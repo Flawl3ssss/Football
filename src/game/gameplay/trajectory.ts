@@ -8,6 +8,19 @@ export interface Point2D {
 export interface TrajectoryGesture {
   points: Point2D[];
   viewport: { width: number; height: number };
+  decisionTrajectory?: DecisionTrajectoryConstraints;
+}
+export interface DecisionTrajectoryConstraints {
+  /** Minimum signed angle, in degrees, from the partner direction to the gesture direction. */
+  minAngle: number;
+  /** Maximum signed angle, in degrees, from the partner direction to the gesture direction. */
+  maxAngle: number;
+  /** How far from the partner zone center the gesture may finish, in screen pixels. */
+  allowedDistance: number;
+  /** Partner zone center and optional visual radius, in screen pixels. */
+  targetZone: Point2D & { radius?: number };
+  /** Restrict only pass decisions; later shooting decisions can opt out with `shot`. */
+  decision: 'pass' | 'shot';
 }
 export type ShotKind = 'pass' | 'power' | 'lob' | 'curve';
 export type ShotOutcome = 'goal' | 'miss' | 'post' | 'crossbar' | 'out';
@@ -36,6 +49,15 @@ const CROSSBAR_Y = 1.25;
 const POST_RADIUS = 0.14;
 const MIN_LENGTH = 28;
 const MAX_LENGTH = 520;
+const BALL_START_RADIUS = 150;
+
+export const DEFAULT_FIRST_DECISION_PASS_SECTOR: DecisionTrajectoryConstraints = {
+  minAngle: -28,
+  maxAngle: 28,
+  allowedDistance: 125,
+  targetZone: { x: 105, y: 430, radius: 70 },
+  decision: 'pass',
+};
 
 export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -101,12 +123,48 @@ export function screenToField(
   const nz = (0.78 - point.y / viewport.height) * 7.2;
   return new Vector3(nx, 0.18, nz);
 }
+
+function signedAngleDegrees(from: Point2D, to: Point2D): number {
+  const dot = from.x * to.x + from.y * to.y;
+  const cross = from.x * to.y - from.y * to.x;
+  return (Math.atan2(cross, dot) * 180) / Math.PI;
+}
+export function validateDecisionTrajectory(
+  gesture: TrajectoryGesture,
+  constraints = gesture.decisionTrajectory,
+): string | undefined {
+  if (!constraints || constraints.decision === 'shot') return undefined;
+  if (gesture.points.length < 2) return 'Жест слишком короткий';
+  const ballScreen = { x: gesture.viewport.width / 2, y: gesture.viewport.height * 0.72 };
+  const start = gesture.points[0]!;
+  if (distance(start, ballScreen) > BALL_START_RADIUS) return 'Начни от мяча';
+
+  const end = gesture.points[gesture.points.length - 1]!;
+  const gestureVector = { x: end.x - ballScreen.x, y: end.y - ballScreen.y };
+  const partnerVector = {
+    x: constraints.targetZone.x - ballScreen.x,
+    y: constraints.targetZone.y - ballScreen.y,
+  };
+  if (Math.hypot(gestureVector.x, gestureVector.y) < MIN_LENGTH)
+    return 'Проведи пас в сторону партнёра';
+  if (gestureVector.y > 0) return 'Проведи пас в сторону партнёра';
+
+  const angle = signedAngleDegrees(partnerVector, gestureVector);
+  if (angle < constraints.minAngle) return 'Слишком влево';
+  if (angle > constraints.maxAngle) return 'Слишком вправо';
+  if (distance(end, constraints.targetZone) > constraints.allowedDistance)
+    return 'Проведи пас в сторону партнёра';
+  return undefined;
+}
+
 export function createTrajectoryPlan(gesture: TrajectoryGesture): TrajectoryPlan {
   if (gesture.points.length < 2) return invalid('Жест слишком короткий', gesture.points);
   const start = gesture.points[0]!;
   const ballScreen = { x: gesture.viewport.width / 2, y: gesture.viewport.height * 0.72 };
-  if (distance(start, ballScreen) > 150)
-    return invalid('Начните жест рядом с мячом', gesture.points);
+  if (distance(start, ballScreen) > BALL_START_RADIUS)
+    return invalid('Начни от мяча', gesture.points);
+  const decisionReason = validateDecisionTrajectory(gesture);
+  if (decisionReason) return invalid(decisionReason, gesture.points);
   let points = simplifyPath(smoothPath(clampPathLength(gesture.points)));
   const length = pathLength(points);
   if (length < MIN_LENGTH) return invalid('Проведите длиннее', points);
