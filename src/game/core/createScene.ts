@@ -10,6 +10,7 @@ import {
   Vector3,
 } from '@babylonjs/core';
 import type { Engine } from '@babylonjs/core/Engines/engine';
+import { createFootballerMaterials, createFootballerModel } from '../entities/footballerModel';
 import { createPrototypeFootballers, type Footballer } from '../gameplay/episode';
 
 export interface PrototypeScene extends Scene {
@@ -114,25 +115,9 @@ export function createGameScene(engine: Engine): PrototypeScene {
   scene.ball = ball;
   scene.trajectoryRoot = new TransformNode('trajectory-preview-root', scene);
   scene.footballers = createPrototypeFootballers();
-  const homeMat = material(scene, 'home-team-temp-kit', new Color3(0.1, 0.35, 1));
-  const awayMat = material(scene, 'away-team-temp-kit', new Color3(1, 0.22, 0.12));
-  const keeperMat = material(scene, 'keeper-temp-kit', new Color3(0.95, 0.8, 0.1));
+  const footballerMaterials = createFootballerMaterials(scene);
   scene.footballers.forEach((player) => {
-    const body = MeshBuilder.CreateCylinder(
-      `${player.id}-body`,
-      { height: 0.62, diameterTop: 0.24, diameterBottom: 0.32 },
-      scene,
-    );
-    body.position.copyFrom(player.position).addInPlaceFromFloats(0, 0.45, 0);
-    body.material =
-      player.role === 'goalkeeper' ? keeperMat : player.team === 'home' ? homeMat : awayMat;
-    const head = MeshBuilder.CreateSphere(
-      `${player.id}-head`,
-      { diameter: 0.22, segments: 8 },
-      scene,
-    );
-    head.position.copyFrom(player.position).addInPlaceFromFloats(0, 0.88, 0);
-    head.material = material(scene, `${player.id}-skin`, new Color3(0.8, 0.56, 0.38));
+    createFootballerModel(scene, player, footballerMaterials);
   });
 
   scene.setBallPath = (points: Vector3[]): void => {
